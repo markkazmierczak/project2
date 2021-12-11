@@ -46,7 +46,7 @@ class_diag <- function(score, truth, positive, cutoff=.5){
 
 # Mining, Classification, Prediction
 
-## Name and EID here
+Mark Kazmierczak, mjk2299
 
 ### Introduction 
 
@@ -55,8 +55,13 @@ Paragraph or two introducing your datasets and variables, why they are interesti
 ```{R}
 library(tidyverse)
 # read your datasets in here, e.g., with read_csv()
+affairs <- read_csv("~/project2/Affairs (1).csv")
 
 # if your dataset needs tidying, do so here
+infidelity <- affairs %>% select(-1) %>% mutate(affair = ifelse(affairs > 0 , 'yes', 'no'))
+
+
+
 
 # any other code here
 ```
@@ -65,7 +70,29 @@ library(tidyverse)
 
 ```{R}
 library(cluster)
-# clustering code here
+library(GGally)
+
+# Determine k
+sil_width <- vector()
+for (i in 2:10) {
+    pam_fit <- pam(infidelity, diss = TRUE, k = i)
+    sil_width[i] <- pam_fit$silinfo$avg.width
+}
+
+ggplot() + geom_line(aes(x = 1:10, y = sil_width)) + scale_x_continuous(name = "k", 
+    breaks = 1:10)
+
+#PAM
+infidelity_pam <- pam(infidelity, k = 2)
+
+infidelity_pam
+
+infidelity_pam$silinfo$avg.width
+
+#Pairwise Combinations
+infidelity %>% mutate(cluster = as.factor(infidelity_pam$clustering)) %>% 
+    head() %>% ggpairs(aes(color = cluster))
+
 ```
 
 Discussion of clustering here
@@ -74,7 +101,27 @@ Discussion of clustering here
 ### Dimensionality Reduction with PCA
 
 ```{R}
-# PCA code here
+# PCA
+
+infidelity.pcadata <- infidelity %>% select_if( is.numeric)
+
+infidelity.pca <- princomp(infidelity.pcadata, cor = T)
+
+summary(infidelity.pca , loadings = T)
+
+# visualize
+
+library(ggplot2)
+
+infidelity.pca.df <- infidelity.pca$scores %>% as.data.frame()
+
+infidelity.pca.df <- infidelity.pca.df %>% mutate(affairs = as.factor(infidelity.pcadata$affairs))
+
+infidelity.pca.df %>% ggplot(aes(Comp.1, Comp.2, color = affairs)) + 
+  geom_point(size = 1) + xlab("PC1") + ylab("PC2") +
+  scale_color_manual(values=c("black", "#F8766D", "#00BA38","#00A5FF", "#E76BF3", "Red" )) +
+  theme_classic() + theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
+  ggtitle("PCA 1 and PCA 2") 
 ```
 
 Discussions of PCA here. 
