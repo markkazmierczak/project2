@@ -50,20 +50,18 @@ Mark Kazmierczak, mjk2299
 
 ### Introduction 
 
-Paragraph or two introducing your datasets and variables, why they are interesting to you, etc. See instructions for more information
+The the Affairs data that was used for this project was taken from https://vincentarelbundock.github.io/Rdatasets/datasets.html. This data collected by survey in 1969 consists of 7 numeric variables that include age, years married, a rating of satisfaction of the marriage, education level, occupation, and the number of affairs over the past year. Two categorical variables include gender and whether or not there were children in the marriage. The categorical variable of "faithful" was added the describe whether a person had or had not engaged in an affair over the year prior. I choose this data because the data from my previous project was not compatible for this project so I searched for a dataset that would maximize the learning objectives for the second half of the semester. This data has an nice mix of numeric and categorical variables with 601 observations which I believe will be suitable for practicing the skills in this project. 
 
 ```{R}
 library(tidyverse)
+set.seed(22)
 # read your datasets in here, e.g., with read_csv()
 affairs <- read_csv("~/project2/Affairs (1).csv")
 
-# if your dataset needs tidying, do so here
+# Addition of categorical variable "faithful"
 infidelity <- affairs %>% select(-1) %>% mutate(faithful = ifelse(affairs > 0 , 0, 1))
 
 
-
-
-# any other code here
 ```
 
 ### Cluster Analysis
@@ -72,6 +70,7 @@ infidelity <- affairs %>% select(-1) %>% mutate(faithful = ifelse(affairs > 0 , 
 library(cluster)
 library(GGally)
 
+infidelity.cluster <- infidelity %>% select(1,3,4,6,9)
 # Determine k
 sil_width <- vector()
 for (i in 2:10) {
@@ -83,20 +82,20 @@ ggplot() + geom_line(aes(x = 1:10, y = sil_width)) + scale_x_continuous(name = "
     breaks = 1:10)
 
 #PAM
-infidelity_pam <- pam(infidelity, k = 2)
+infidelity_pam <- pam(infidelity.cluster, k = 2)
 
 infidelity_pam
 
+# average sil width
 infidelity_pam$silinfo$avg.width
 
 #Pairwise Combinations
-infidelity %>% mutate(cluster = as.factor(infidelity_pam$clustering)) %>% 
+infidelity.cluster %>% mutate(cluster = as.factor(infidelity_pam$clustering)) %>% 
     head() %>% ggpairs(aes(color = cluster))
 
 ```
 
-Discussion of clustering here
-    
+The variables affairs, age, years married, religiousness and rating were used to perform clustering using PAM. I limited it to these variables because using more variables overly compressed the Pairwise plot and made it difficult to interpret. The years married and religiousness variables appear to have the least overlap on the plot and have the strongest correlation at 0.712. This suggests that we might be able to use these two variables in tandem when creating models that differentiate groups. The most overlap in points and weakest correlation occurred between rating and religiousness variables. This suggests that these two variables used together to differentiate groups. The average silhouette width was 0.52 which means that a reasonable structure was found. However, it barely fell into the reasonable range which means this interpretation is borderline with weak or artificial structures. 
     
 ### Dimensionality Reduction with PCA
 
@@ -121,11 +120,10 @@ infidelity.pca.df %>% ggplot(aes(Comp.1, Comp.2, color = affairs)) +
   geom_point(size = 1) + xlab("PC1") + ylab("PC2") +
   scale_color_manual(values=c("black", "#F8766D", "#00BA38","#00A5FF", "#E76BF3", "Red" )) +
   theme_classic() + theme(plot.title = element_text(hjust = 0.5, face = "bold")) +
-  ggtitle("PCA 1 and PCA 2") 
+  ggtitle("PC 1 and PC 2") 
 ```
 
-Discussions of PCA here. 
-
+For the PCA all of the numeric variables were used. PC1 and PC2 combined accounted for 51.50% of the variation observed in this dataset.PC1 and PC2 where plotted on a scatter plot on the points were colored by the affairs variable. Black dots represent individuals that did not engage in affairs while colored dots represent those that did. A high score in PC1 is for people that scored high in both age and years married but low in the rating variable. A high score in PC2 is for people that scored low in both education, occupation ,and the rating variable. It appears that individuals that did not engage in an affair are slightly more condensed the region of low PC1 and low PC2 scores. Individuals that did have affairs appear to have a high concentration in the high PC1 region. 
 ###  Linear Classifier
 
 ```{R}
@@ -141,13 +139,13 @@ class_diag(faithful_prob, truth = infidelity$faithful, positive = 1)
 
 #confusion matrix
 
-table(True = infidelity$faithful, Predicted = faithful_prob > 0.5  )
+table(Actual = infidelity$faithful, Predicted = faithful_prob > 0.5  )
 
 ```
 
 ```{R}
 # cross-validation of linear classifier here
-
+set.seed(22)
 k = 10
 data <- sample_frac(infidelity)  
 folds <- rep(1:k, length.out = nrow(data)) 
@@ -173,45 +171,96 @@ summarize_all(diags, mean)
 
 
 ```
+The model did an average job of predicting the faithful variable with an area under the curve of 0.7047. The auc dropped very little when applied to new data which means it did not over fit. The weakest part of the model was specificity. This model predicted 13 true negatives but predicted 123 false positives. Since the majority of the data is positive, this model over predicts positives which leads to high sensitivity but low specificity. 
 
-Discussion here
 
 ### Non-Parametric Classifier
 
 ```{R}
 library(caret)
 # non-parametric classifier code here
-
-library(rpart); library(rpart.plot)
-
-fit<- rpart(data= infidelity, faithful ~ age + rating+ yearsmarried + religiousness + education)
+set.seed(22)
+knn_fit <- knn3(data= infidelity, faithful~ age + rating+ yearsmarried + religiousness + education)
 
 
-fit <- train(data= infidelity, faithful ~ age + rating+ yearsmarried + religiousness + education, method="rpart")
+prob_knn <- predict(knn_fit, newdata = test)[, 2]
+
+metrics <- rbind(diags, class_diag(prob_knn, truth, positive = 1))
+
+summarise_all(metrics, mean)
 
 
-fit$bestTune
-rpart.plot(fit$finalModel)
+
 ```
 
 ```{R}
 # cross-validation of np classifier here
+set.seed(22)
+k = 10
+data <- sample_frac(infidelity)  
+folds <- rep(1:k, length.out = nrow(data)) 
+diags <- NULL
+
+i = 1
+for (i in 1:k) {
+  # create training and test sets
+  train <- data[folds != i, ]
+  test <- data[folds == i, ]
+  truth <- test$faithful
+  
+
+  fit <- knn3(data= train, faithful~ age + rating+ yearsmarried + religiousness + education)
+  
+  probs <- predict(fit, newdata = test)[,2]
+  
+  diags <- rbind(diags, class_diag(probs, truth, positive = 1))
+}
+
+
+summarize_all(diags, mean)
+
 ```
 
-Discussion
+A k-nearest neighbors model was created using the same variables as the linear-classifier model. The cross-validation performance had an area under the curve of 0.625 which was worse than the linear classifier model. The performance was not very good and again can be attributed to a very low specificity score. The model did not show signs of over-fitting and dropped very little when applied to new data.
 
 
 ### Regression/Numeric Prediction
 
 ```{R}
 # regression model code here
+lr_fit <-lm(affairs~ rating+ age+ yearsmarried ,data=infidelity)
+yhat <- predict(lr_fit)
+
+# Linear Regression Model
+summary(lr_fit)
+
+#MSE
+mean((infidelity$affairs-yhat)^2)
+
+
 ```
 
 ```{R}
 # cross-validation of regression model here
+set.seed(22)
+k = 10
+data <- sample_frac(infidelity)  
+folds <- rep(1:k, length.out = nrow(data)) 
+diags <- NULL
+
+for(i in 1:k){
+  train<-data[folds!=i,]
+  test<-data[folds==i,]
+  fit<-lm(affairs~ rating+ age+ yearsmarried,data=train)
+  yhat<-predict(fit,newdata=test)
+  diags<-mean((test$affairs-yhat)^2) 
+}
+
+# CV MSE
+mean(diags)
 ```
 
-Discussion
+The rating, years married and age variables were used to create a linear regression model to predict the affairs variable. These variables were used because they appeared to have the least overlap in the Pairwise plot and had the higher numbers in PC1. Both age and rating appear to have a negative correlation with  the affair variable while years married has a positive correlation. This model predicts that individuals that are high in the rating and age variables and low in the year married will engage in less affairs. The MSE was 11.37 in the original model and dropped to 8.84 for the cross validation which suggests that the model is not over fit. 
 
 ### Python 
 
@@ -238,7 +287,7 @@ py$infidelity %>% glimpse()
 py$infidelity %>% as.data.frame() %>% select(1:6) %>% head(5)
 ```
 
-Discussion
+In the python I read in the R script and then saved it as an object in Python. I then used py$ to read that python object into R. Python turned the data.frame into a lists. In order to read the object as it originally was in R, the as.data.frame function was used.
 
 ### Concluding Remarks
 
