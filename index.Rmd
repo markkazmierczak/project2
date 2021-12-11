@@ -148,6 +148,29 @@ table(True = infidelity$faithful, Predicted = faithful_prob > 0.5  )
 ```{R}
 # cross-validation of linear classifier here
 
+k = 10
+data <- sample_frac(infidelity)  
+folds <- rep(1:k, length.out = nrow(data)) 
+diags <- NULL
+
+i = 1
+for (i in 1:k) {
+  # create training and test sets
+  train <- data[folds != i, ]
+  test <- data[folds == i, ]
+  truth <- test$faithful
+  
+
+  fit <- infidelity.glm
+  
+  probs <- predict(fit, newdata = test, type = "response")
+  
+  diags <- rbind(diags, class_diag(probs, truth, positive = 1))
+}
+
+
+summarize_all(diags, mean)
+
 
 ```
 

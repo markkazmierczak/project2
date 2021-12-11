@@ -1662,7 +1662,32 @@ table(True = infidelity$faithful, Predicted = faithful_prob &gt;
 ## True FALSE TRUE
 ##    0    23  127
 ##    1    15  436</code></pre>
-<pre class="r"><code># cross-validation of linear classifier here</code></pre>
+<pre class="r"><code># cross-validation of linear classifier here
+
+k = 10
+data &lt;- sample_frac(infidelity)
+folds &lt;- rep(1:k, length.out = nrow(data))
+diags &lt;- NULL
+
+i = 1
+for (i in 1:k) {
+    # create training and test sets
+    train &lt;- data[folds != i, ]
+    test &lt;- data[folds == i, ]
+    truth &lt;- test$faithful
+    
+    
+    fit &lt;- infidelity.glm
+    
+    probs &lt;- predict(fit, newdata = test, type = &quot;response&quot;)
+    
+    diags &lt;- rbind(diags, class_diag(probs, truth, positive = 1))
+}
+
+
+summarize_all(diags, mean)</code></pre>
+<pre><code>##       acc    sens    spec     ppv      f1      ba     auc
+## 1 0.76364 0.96634 0.15858 0.77471 0.85893 0.56245 0.70403</code></pre>
 <p>Discussion here</p>
 </div>
 <div id="non-parametric-classifier" class="section level3">
