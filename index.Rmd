@@ -58,7 +58,7 @@ library(tidyverse)
 affairs <- read_csv("~/project2/Affairs (1).csv")
 
 # if your dataset needs tidying, do so here
-infidelity <- affairs %>% select(-1) %>% mutate(affair = ifelse(affairs > 0 , 'yes', 'no'))
+infidelity <- affairs %>% select(-1) %>% mutate(faithful = ifelse(affairs > 0 , 0, 1))
 
 
 
@@ -130,10 +130,21 @@ Discussions of PCA here.
 
 ```{R}
 # linear classifier code here
+
+infidelity.glm <- glm(data= infidelity, faithful ~ age + rating+ yearsmarried + religiousness + education , family = "binomial")
+
+
+faithful_prob <- predict(infidelity.glm, type = "response")
+
+#class diag
+class_diag(faithful_prob, truth = infidelity$faithful, positive = 1)
+
 ```
 
 ```{R}
 # cross-validation of linear classifier here
+
+
 ```
 
 Discussion here
@@ -167,11 +178,29 @@ Discussion
 ### Python 
 
 ```{R}
-library(reticulate)
+library(reticulate) 
+
+
+
+
 ```
 
 ```{python}
-# python code here
+
+#Defining the infidelity data frame in R
+
+infidilety = r.infidelity
+
+  
+
+
+```
+
+```{r}
+# Displaying the python infidelity object in R as a data frame
+py$infidilety %>% glimpse()
+
+py$infidilety %>% as.data.frame() %>% head()
 ```
 
 Discussion
