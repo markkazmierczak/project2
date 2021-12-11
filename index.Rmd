@@ -103,7 +103,7 @@ Discussion of clustering here
 ```{R}
 # PCA
 
-infidelity.pcadata <- infidelity %>% select_if( is.numeric)
+infidelity.pcadata <- infidelity %>% select(-10) %>% select_if( is.numeric)
 
 infidelity.pca <- princomp(infidelity.pcadata, cor = T)
 
@@ -138,6 +138,10 @@ faithful_prob <- predict(infidelity.glm, type = "response")
 
 #class diag
 class_diag(faithful_prob, truth = infidelity$faithful, positive = 1)
+
+#confusion matrix
+
+table(True = infidelity$faithful, Predicted = faithful_prob > 0.5  )
 
 ```
 
@@ -180,27 +184,24 @@ Discussion
 ```{R}
 library(reticulate) 
 
-
-
-
 ```
 
 ```{python}
 
 #Defining the infidelity data frame in R
 
-infidilety = r.infidelity
 
-  
+infidelity = r.infidelity
+
 
 
 ```
 
 ```{r}
 # Displaying the python infidelity object in R as a data frame
-py$infidilety %>% glimpse()
+py$infidelity %>% glimpse()
 
-py$infidilety %>% as.data.frame() %>% head()
+py$infidelity %>% as.data.frame() %>% select(1:6) %>% head(5)
 ```
 
 Discussion
