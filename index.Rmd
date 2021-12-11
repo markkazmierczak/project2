@@ -181,6 +181,17 @@ Discussion here
 ```{R}
 library(caret)
 # non-parametric classifier code here
+
+library(rpart); library(rpart.plot)
+
+fit<- rpart(data= infidelity, faithful ~ age + rating+ yearsmarried + religiousness + education)
+
+
+fit <- train(data= infidelity, faithful ~ age + rating+ yearsmarried + religiousness + education, method="rpart")
+
+
+fit$bestTune
+rpart.plot(fit$finalModel)
 ```
 
 ```{R}
